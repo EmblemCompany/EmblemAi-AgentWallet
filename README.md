@@ -126,7 +126,7 @@ emblem-reset
 
 ## Links
 
-- [EmblemVault](https://emblemvault.ai)
+- [EmblemVault](https://emblemvault.dev)
 - [Hustle AI](https://agenthustle.ai)
 - [npm package](https://www.npmjs.com/package/@emblemvault/agentwallet)
 - [OpenClaw Skills Docs](https://docs.openclaw.ai/tools/skills)

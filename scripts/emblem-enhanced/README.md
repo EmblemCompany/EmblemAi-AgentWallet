@@ -40,6 +40,6 @@ Solana, Ethereum, Base, BSC, Polygon, Hedera, Bitcoin
 
 ## Links
 
-- [EmblemVault](https://emblemvault.ai)
+- [EmblemVault](https://emblemvault.dev)
 - [Hustle AI](https://agenthustle.ai)
 - [OpenClaw Skill](https://github.com/EmblemCompany/EmblemAi-AgentWallet)

@@ -1,6 +1,6 @@
 {
   "name": "@emblemvault/agentwallet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI for EmblemVault Hustle AI - autonomous crypto wallet management",
   "main": "enhanced-hustle.js",
   "type": "module",
@@ -37,7 +37,7 @@
     "type": "git",
     "url": "https://github.com/EmblemCompany/EmblemAi-AgentWallet.git"
   },
-  "homepage": "https://emblemvault.ai",
+  "homepage": "https://emblemvault.dev",
   "engines": {
     "node": ">=18.0.0"
   },
