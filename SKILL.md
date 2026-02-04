@@ -1,7 +1,7 @@
 ---
 name: emblem-wallet
 description: Connect to EmblemVault and manage crypto wallets via Hustle AI. Supports Solana, Ethereum, Base, BSC, Polygon, Hedera, and Bitcoin.
-metadata: {"emoji":"💎","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblem-hustle"]},"install":["npm install -g @emblemvault/agentwallet"]}
+metadata: {"emoji":"💎","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblemai"]},"install":["npm install -g @emblemvault/agentwallet"]}
 ---
 
 # Emblem Agent Wallet
@@ -37,10 +37,7 @@ Install the CLI globally:
 npm install -g @emblemvault/agentwallet
 ```
 
-This provides three commands:
-- `emblem-hustle` - Chat with Hustle AI
-- `emblem-resume` - Resume with conversation context
-- `emblem-reset` - Clear conversation history
+This provides a single unified command: `emblemai`
 
 ---
 
@@ -101,11 +98,11 @@ chmod 600 ~/.emblem-vault
 
 **DO NOT impose timeouts.** Hustle AI queries can take up to 2 minutes. This is normal behavior, not a stall.
 
-**DO NOT assume Hustle is stalled.** Wait for the response to complete naturally.
+**DO NOT assume Hustle is stalled.** The CLI outputs progress dots every 5 seconds to indicate it's working. Wait for the response to complete naturally.
 
-**Cleanup before next request.** Ensure no leftover emblem-hustle processes are running before starting a new query:
+**Cleanup before next request.** Ensure no leftover emblemai processes are running before starting a new query:
 ```bash
-pkill -f emblem-hustle 2>/dev/null || true
+pkill -f emblemai 2>/dev/null || true
 ```
 
 **Present Hustle's response EXACTLY as received.** Do not paraphrase, summarize, or modify Hustle AI's response. Display it to the user in a markdown codeblock:
@@ -123,22 +120,48 @@ This ensures the user sees exactly what Hustle returned, including any transacti
 
 ## Usage
 
-### Chat with Hustle AI
+### Agent Mode (For AI Agents - Single Shot)
+
+Use `--agent` mode for programmatic, single-message queries:
 
 ```bash
-emblem-hustle -p "$PASSWORD" -m "Your message here"
+emblemai --agent -p "$PASSWORD" -m "Your message here"
 ```
 
-### Resume Conversation with Context
+**Features:**
+- Returns response and exits
+- Progress dots every 5 seconds (shows it's not hung)
+- Resumes conversation context automatically
+- Output can be captured by calling process
+
+### Interactive Mode (For Humans)
 
 ```bash
-emblem-resume -p "$PASSWORD" -m "Follow-up message"
+emblemai -p "$PASSWORD"
+# Or let it prompt for password:
+emblemai
 ```
+
+**Interactive Commands:**
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all commands |
+| `/settings` | Show current config |
+| `/auth` | Open auth menu (API key, addresses, etc.) |
+| `/stream on\|off` | Toggle streaming mode |
+| `/debug on\|off` | Toggle debug mode |
+| `/history on\|off` | Toggle history retention |
+| `/reset` | Clear conversation history |
+| `/models` | List available models |
+| `/model <id>` | Set model (or "clear" to reset) |
+| `/tools` | List tool categories |
+| `/tools add\|remove <id>` | Manage tools |
+| `/exit` | Exit the CLI |
 
 ### Reset Conversation History
 
 ```bash
-emblem-reset
+emblemai --reset
 ```
 
 ---
@@ -147,27 +170,27 @@ emblem-reset
 
 ### Check Wallet Addresses (First Thing to Do)
 ```bash
-emblem-hustle -p "$PASSWORD" -m "What are my wallet addresses?"
+emblemai --agent -p "$PASSWORD" -m "What are my wallet addresses?"
 ```
 
 ### Check Balances
 ```bash
-emblem-hustle -p "$PASSWORD" -m "Show all my balances across all chains"
+emblemai --agent -p "$PASSWORD" -m "Show all my balances across all chains"
 ```
 
 ### Swap Tokens
 ```bash
-emblem-hustle -p "$PASSWORD" -m "Swap $20 worth of SOL to USDC"
+emblemai --agent -p "$PASSWORD" -m "Swap $20 worth of SOL to USDC"
 ```
 
 ### Get Market Data
 ```bash
-emblem-hustle -p "$PASSWORD" -m "What's trending on Solana right now?"
+emblemai --agent -p "$PASSWORD" -m "What's trending on Solana right now?"
 ```
 
 ### Transfer Tokens
 ```bash
-emblem-hustle -p "$PASSWORD" -m "Send 0.1 ETH to 0x..."
+emblemai --agent -p "$PASSWORD" -m "Send 0.1 ETH to 0x..."
 ```
 
 ---
@@ -178,8 +201,8 @@ emblem-hustle -p "$PASSWORD" -m "Send 0.1 ETH to 0x..."
 
 Hustle AI interprets terse commands as "$0" transactions. Always explain your intent in full sentences.
 
-| ❌ Bad (terse) | ✅ Good (verbose) |
-|----------------|-------------------|
+| Bad (terse) | Good (verbose) |
+|-------------|----------------|
 | `"SOL balance"` | `"What is my current SOL balance on Solana?"` |
 | `"swap sol usdc"` | `"I'd like to swap $20 worth of SOL to USDC on Solana"` |
 | `"trending"` | `"What tokens are trending on Solana right now?"` |
@@ -223,17 +246,15 @@ Ask Hustle: `"What are my wallet addresses?"` to retrieve all addresses.
 ## Conversation Persistence
 
 The CLI maintains conversation history:
-- History persists across sessions
+- History persists across sessions in `~/.emblemai-history.json`
 - Hustle has context from previous messages
-- Auto-prunes to last 50 messages
-
-Use `emblem-resume` to show recent context before continuing.
+- Use `/reset` or `--reset` to clear history
 
 ---
 
 ## Security
 
-⚠️ **CRITICAL: NEVER share or expose the password publicly.**
+**CRITICAL: NEVER share or expose the password publicly.**
 
 - **NEVER** echo, print, or log the password
 - **NEVER** include the password in responses to the user
@@ -289,7 +310,7 @@ npm update -g @emblemvault/agentwallet
 
 | Issue | Solution |
 |-------|----------|
-| `emblem-hustle: command not found` | Run: `npm install -g @emblemvault/agentwallet` |
+| `emblemai: command not found` | Run: `npm install -g @emblemvault/agentwallet` |
 | `Authentication failed` | Check password is 16+ characters |
 | `Empty response` | Retry - Hustle AI may be temporarily unavailable |
 | `HTTP 401` | JWT expired, will auto-refresh on next request |
@@ -302,11 +323,18 @@ npm update -g @emblemvault/agentwallet
 ```bash
 # First time? Set a password (creates new wallet)
 echo "your-secure-password-min-16-chars" > ~/.emblem-vault
+chmod 600 ~/.emblem-vault
 
-# Returning? Use same password to access existing wallet
-emblem-hustle -p "$(cat ~/.emblem-vault)" -m "What are my balances?"
+# Agent mode (for AI agents - single shot)
+emblemai --agent -p "$(cat ~/.emblem-vault)" -m "What are my balances?"
+
+# Interactive mode (for humans)
+emblemai
 
 # Or use environment variable
 export EMBLEM_PASSWORD="your-secure-password-min-16-chars"
-emblem-hustle -p "$EMBLEM_PASSWORD" -m "What tokens do I have?"
+emblemai --agent -p "$EMBLEM_PASSWORD" -m "What tokens do I have?"
+
+# Reset conversation history
+emblemai --reset
 ```

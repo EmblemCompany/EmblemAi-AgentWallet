@@ -1,6 +1,6 @@
 # @emblemvault/agentwallet
 
-CLI tools for **Agent Hustle** - EmblemVault's autonomous crypto AI with 256+ trading tools across 7 blockchains.
+CLI for **Agent Hustle** - EmblemVault's autonomous crypto AI with 256+ trading tools across 7 blockchains.
 
 ## Install
 
@@ -8,43 +8,70 @@ CLI tools for **Agent Hustle** - EmblemVault's autonomous crypto AI with 256+ tr
 npm install -g @emblemvault/agentwallet
 ```
 
-## Commands
+## Usage
 
-### Interactive Chat (Recommended for Humans)
+### Agent Mode (For AI Agents)
+
+Single-shot queries that return a response and exit:
+
 ```bash
-# Full interactive CLI with streaming, tools, and auth menu
-hustle-chat --password "your-password-16-chars-min"
+# Query Hustle AI
+emblemai --agent -p "your-password-16-chars-min" -m "What are my wallet addresses?"
+
+# Using environment variable
+export EMBLEM_PASSWORD="your-password-16-chars-min"
+emblemai --agent -p "$EMBLEM_PASSWORD" -m "Show my balances"
+```
+
+### Interactive Mode (For Humans)
+
+Full interactive CLI with streaming, tools, and auth menu:
+
+```bash
+# With password argument
+emblemai -p "your-password-16-chars-min"
 
 # Or let it prompt for password
-hustle-chat
+emblemai
 ```
 
-### Single-Shot Commands (For AI Agents)
+### Reset Conversation
+
 ```bash
-# Send a single message to Agent Hustle
-emblem-hustle -p "your-password-16-chars-min" -m "What are my wallet addresses?"
-
-# Resume with conversation context
-emblem-resume -p "your-password" -m "Follow-up question"
-
-# Reset conversation history
-emblem-reset
+emblemai --reset
 ```
+
+## Interactive Commands
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all commands |
+| `/settings` | Show current config |
+| `/auth` | Open auth menu (API key, addresses, etc.) |
+| `/stream on\|off` | Toggle streaming mode |
+| `/debug on\|off` | Toggle debug mode |
+| `/history on\|off` | Toggle history retention |
+| `/reset` | Clear conversation history |
+| `/models` | List available models |
+| `/model <id>` | Set model |
+| `/tools` | List tool categories |
+| `/tools add\|remove <id>` | Manage tools |
+| `/exit` | Exit the CLI |
 
 ## Example Queries
 
 ```bash
 # Check wallet addresses
-emblem-hustle -p "$PASSWORD" -m "What are my wallet addresses?"
+emblemai --agent -p "$PASSWORD" -m "What are my wallet addresses?"
 
 # Check balances
-emblem-hustle -p "$PASSWORD" -m "Show all my balances across all chains"
+emblemai --agent -p "$PASSWORD" -m "Show all my balances across all chains"
 
 # Swap tokens
-emblem-hustle -p "$PASSWORD" -m "Swap $20 worth of SOL to USDC"
+emblemai --agent -p "$PASSWORD" -m "Swap $20 worth of SOL to USDC"
 
 # Market trends
-emblem-hustle -p "$PASSWORD" -m "What's trending on Solana right now?"
+emblemai --agent -p "$PASSWORD" -m "What's trending on Solana right now?"
 ```
 
 ## Authentication
