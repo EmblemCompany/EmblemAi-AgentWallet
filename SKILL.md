@@ -9,6 +9,7 @@ metadata:
   install: "npm install -g @emblemvault/agentwallet"
   author: "EmblemCompany"
   version: "3.0.2"
+
 ---
 
 # Emblem Agent Wallet
