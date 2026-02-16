@@ -10,7 +10,7 @@ All commands are prefixed with `/`. Type them in the input bar and press Enter.
 |---------|-------------|
 | `/help` | Show all available commands |
 | `/settings` | Show current configuration (vault ID, model, streaming, debug, tools) |
-| `/exit` | Exit the CLI (also: `/quit`, or type `exit`/`quit` without slash) |
+| `/exit` | Exit the CLI (also: `/quit`) |
 
 ### Chat and History
 
@@ -37,7 +37,6 @@ All commands are prefixed with `/`. Type them in the input bar and press Enter.
 
 | Command | Description |
 |---------|-------------|
-| `/models` | List all available AI models |
 | `/model <id>` | Set the active model by ID |
 | `/model clear` | Reset to API default model |
 | `/model` | Show currently selected model |
@@ -46,32 +45,34 @@ All commands are prefixed with `/`. Type them in the input bar and press Enter.
 
 | Command | Description |
 |---------|-------------|
-| `/tools` | List all tool categories with selection status |
-| `/tools add <id>` | Add a tool category to the active set |
-| `/tools remove <id>` | Remove a tool category from the active set |
+| `/tools` | List all tools with selection status |
+| `/tools add <id>` | Add a tool to the active set |
+| `/tools remove <id>` | Remove a tool from the active set |
 | `/tools clear` | Clear tool selection (enable auto-tools mode) |
 
-When no tools are selected, the AI operates in **auto-tools mode**, dynamically choosing appropriate tools based on conversation context and intent.
+When no tools are selected, the AI operates in **auto-tools mode**, dynamically choosing appropriate tools based on conversation context.
 
 ### Authentication
 
 | Command | Description |
 |---------|-------------|
-| `/auth` | Open the authentication menu |
+| `/auth` | Open authentication menu |
+| `/wallet` | Show wallet addresses (EVM, Solana, BTC, Hedera) |
+| `/portfolio` | Show portfolio (routes as a chat query) |
 
-The auth menu provides:
+The `/auth` menu provides:
 
 | Option | Description |
 |--------|-------------|
-| 1. Get API Key | Retrieve your vault's API key |
+| 1. Get API Key | Fetch your vault API key |
 | 2. Get Vault Info | Show vault ID, addresses, creation date |
-| 3. Get Session Info | Show auth token, expiry, app ID |
-| 4. Refresh Session | Refresh the authentication session |
-| 5. Get EVM Address | Show your Ethereum/EVM address |
-| 6. Get Solana Address | Show your Solana address |
-| 7. Get BTC Addresses | Show P2PKH, P2WPKH (SegWit), P2TR (Taproot) |
-| 8. Logout | Clear session and exit |
-| 9. Back to chat | Return to the main interface |
+| 3. Session Info | Show current session details (identifier, expiry, auth type) |
+| 4. Refresh Session | Refresh the auth session token |
+| 5. EVM Address | Show your Ethereum/EVM address |
+| 6. Solana Address | Show your Solana address |
+| 7. BTC Addresses | Show your Bitcoin addresses (P2PKH, P2WPKH, P2TR) |
+| 8. Backup Agent Auth | Export credentials to a backup file |
+| 9. Logout | Clear session and exit (requires re-authentication on next run) |
 
 ### Payment (PAYG Billing)
 
@@ -87,114 +88,84 @@ The auth menu provides:
 
 | Command | Description |
 |---------|-------------|
-| `/plugins` | List all plugins and their status (5 protocol + custom) |
-| `/plugins enable <name>` | Enable a plugin (bankr, a2a, acp, elizaos, bridge) |
-| `/plugins disable <name>` | Disable a plugin |
-| `/plugins info <name>` | Show plugin details, version, and tools |
+| `/plugins` | List all plugins with enabled/disabled status |
+| `/plugin <name> on` | Enable a plugin by name |
+| `/plugin <name> off` | Disable a plugin by name |
 
-### God Mode
+### Secrets
 
 | Command | Description |
 |---------|-------------|
-| `/god` | Toggle god mode (JS executor + plugin builder) |
-| `/capture start` | Start capturing terminal output |
-| `/capture stop` | Stop capturing and save to file |
-| `/capture status` | Show capture status and file path |
+| `/secrets` | Manage encrypted plugin secrets (interactive menu) |
 
-See [GOD-MODE.md](./GOD-MODE.md) for full documentation.
+Secrets are encrypted with your vault key and stored in `~/.emblemai/secrets.json`. Plugins are hot-reloaded after setting a secret (no restart needed).
+
+### Markdown Rendering
+
+| Command | Description |
+|---------|-------------|
+| `/glow on` | Enable markdown rendering via glow |
+| `/glow off` | Disable markdown rendering |
+| `/glow` | Show glow status and version |
+
+Requires [glow](https://github.com/charmbracelet/glow) to be installed.
+
+### Logging
+
+| Command | Description |
+|---------|-------------|
+| `/log on` | Enable stream logging to file |
+| `/log off` | Disable stream logging |
+| `/log` | Show logging status and file path |
+
+Log file defaults to `~/.emblemai-stream.log`. Override with `--log-file <path>`.
 
 ## Keyboard Shortcuts
+
+### Simple Mode (Default)
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `Up` | Recall previous input |
+| `Ctrl+C` | Exit |
+| `Ctrl+D` | Exit (EOF) |
 
 ### TUI Mode
 
 | Key | Action |
 |-----|--------|
-| `Tab` | Cycle focus between panels (sidebar, chat, input, log) |
-| `Enter` | Send message / confirm selection |
-| `Ctrl+C` | Exit the application |
-| `Escape` | Cancel current operation / close menu |
-| `Up/Down` | Scroll through chat history or panel content |
-| `Page Up/Page Down` | Fast scroll through content |
-| `Home/End` | Jump to top/bottom of scrollable content |
-
-### Input Bar
-
-| Key | Action |
-|-----|--------|
-| `Enter` | Send the current message |
-| `Up` | Recall previous message from input history |
-| `Down` | Navigate forward in input history |
-| `Ctrl+C` | Clear input / exit |
-| `Ctrl+U` | Clear the input line |
-| `Backspace` | Delete character before cursor |
-
-### Simple Mode
-
-| Key | Action |
-|-----|--------|
+| `Tab` / `Shift+Tab` | Cycle focus between panels |
 | `Enter` | Send message |
 | `Ctrl+C` | Exit |
-| `Ctrl+D` | Exit (EOF) |
+| `Up/Down` | Scroll panel content |
+| Mouse scroll | Scroll in focused panel |
 
 ## Command Examples
 
-### Basic chat
+### Session management
 
 ```
-You: What are my wallet addresses?
-You: Show all my balances across all chains
-You: What's the price of ETH right now?
-```
-
-### Trading
-
-```
-You: Buy $50 worth of SOL on Solana
-You: Swap 0.1 ETH to USDC on Base
-You: Sell 50% of my PEPE on Ethereum
+/settings
+/auth
+/wallet
+/payment
+/reset
 ```
 
 ### Tool and model management
 
 ```
-/tools add bankr
-/tools add a2a
+/tools
 /model gpt-4
 /stream off
 /debug on
 ```
 
-### Agent interaction (A2A v0.3.0)
+### Plugin management
 
 ```
-You: Discover the A2A agent at https://google-a2a-demo.web.app
-You: Send "hello" to the agent at https://defi-agent.example.com
-You: List all known A2A agents
-You: Start an A2A server on port 3000
-```
-
-### Agent commerce (ACP / Virtuals)
-
-```
-You: Browse ACP marketplace for analytics agents
-You: Browse agents that can do trading on acpx.virtuals.io
-You: Register as a DeFi agent on the ACP marketplace
-You: Start autonomous mode to accept incoming jobs
-```
-
-### Cross-protocol (Bridge)
-
-```
-You: Discover all agents across all protocols that do portfolio analysis
-You: Route a message to any agent that can do swaps
-You: Translate this A2A message to ElizaOS format
-```
-
-### Session management
-
-```
-/reset
-/settings
-/auth
-/payment
+/plugins
+/plugin hustle-elizaos on
+/plugin hustle-elizaos off
 ```

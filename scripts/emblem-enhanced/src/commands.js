@@ -15,7 +15,6 @@ export const COMMANDS = [
   { cmd: '/help', desc: 'Show all commands' },
   { cmd: '/plugins', desc: 'List all plugins with status' },
   { cmd: '/plugin <name> on|off', desc: 'Toggle plugin' },
-  { cmd: '/god', desc: 'Toggle god mode' },
   { cmd: '/tools', desc: 'List available tools' },
   { cmd: '/tools add|remove <id>', desc: 'Manage tools' },
   { cmd: '/tools clear', desc: 'Enable auto-tools mode' },
@@ -102,21 +101,6 @@ function cmdPlugin(args, ctx) {
     return { handled: true };
   }
 
-  ctx.updateSidebar();
-  return { handled: true };
-}
-
-function cmdGod(ctx) {
-  ctx.settings.godMode = !ctx.settings.godMode;
-  if (ctx.settings.godMode) {
-    ctx.pluginManager.enable('god-mode');
-    ctx.appendMessage('system', chalk.bold.magenta('GOD MODE ENABLED') + chalk.dim(' — JS executor and plugin builder active'));
-    ctx.addLog('god', 'God mode enabled');
-  } else {
-    ctx.pluginManager.disable('god-mode');
-    ctx.appendMessage('system', chalk.dim('God mode disabled.'));
-    ctx.addLog('god', 'God mode disabled');
-  }
   ctx.updateSidebar();
   return { handled: true };
 }
@@ -221,7 +205,10 @@ async function cmdAuth(ctx) {
   // Simple mode — import and run the interactive auth menu
   try {
     const { authMenu } = await import('./auth.js');
-    await authMenu(ctx.authSdk, ctx.promptText);
+    const result = await authMenu(ctx.authSdk, ctx.promptText);
+    if (result === 'logout') {
+      return { handled: true, logout: true };
+    }
   } catch (err) {
     ctx.appendMessage('system', chalk.red(`Auth menu error: ${err.message}`));
   }
@@ -285,7 +272,6 @@ function cmdSettings(ctx) {
     `  ${chalk.dim('Streaming:')}    ${ctx.settings.stream ? chalk.green('ON') : chalk.red('OFF')}`,
     `  ${chalk.dim('Debug:')}        ${ctx.settings.debug ? chalk.green('ON') : chalk.red('OFF')}`,
     `  ${chalk.dim('History:')}      ${ctx.settings.retainHistory ? chalk.green('ON') : chalk.red('OFF')}`,
-    `  ${chalk.dim('God Mode:')}     ${ctx.settings.godMode ? chalk.magenta('ON') : chalk.dim('OFF')}`,
     `  ${chalk.dim('Glow:')}         ${ctx.settings.glowEnabled ? chalk.green('ON') : chalk.dim('OFF')}`,
     `  ${chalk.dim('Logging:')}      ${ctx.settings.log ? chalk.green('ON') + chalk.dim(` → ${ctx.LOG_FILE}`) : chalk.dim('OFF')}`,
     `  ${chalk.dim('Messages:')}     ${ctx.history.messages.length}`,
@@ -485,13 +471,13 @@ async function cmdSecrets(args, ctx) {
     return { handled: true };
   }
 
-  const { readCredentialFile, writeCredentialFile } = await import('./auth.js');
+  const { readPluginSecrets, writePluginSecrets } = await import('./auth.js');
 
   // Show menu
-  const creds = readCredentialFile() || {};
+  const secrets = readPluginSecrets();
   const secretStatus = allSecrets.map(s => ({
     ...s,
-    isSet: !!creds.secrets?.[s.name]?.ciphertext,
+    isSet: !!secrets[s.name]?.ciphertext,
   }));
 
   ctx.appendMessage('system', [
@@ -547,13 +533,12 @@ async function cmdSecrets(args, ctx) {
     try {
       const { encrypt } = await import('@emblemvault/auth-sdk/crypto');
       const encrypted = await encrypt(value, { config: { sdk: ctx.authSdk } });
-      const freshCreds = readCredentialFile() || {};
-      if (!freshCreds.secrets) freshCreds.secrets = {};
-      freshCreds.secrets[decl.name] = {
+      const freshSecrets = readPluginSecrets();
+      freshSecrets[decl.name] = {
         ciphertext: encrypted.ciphertext,
         dataToEncryptHash: encrypted.dataToEncryptHash,
       };
-      writeCredentialFile(freshCreds);
+      writePluginSecrets(freshSecrets);
 
       // Hot-reload the plugin with the new secret (no restart needed)
       const reloaded = await ctx.pluginManager.reloadPluginWithSecret(decl.plugin, decl.name, value);
@@ -594,10 +579,10 @@ async function cmdSecrets(args, ctx) {
     }
 
     const target = setSecrets[idx];
-    const freshCreds = readCredentialFile() || {};
-    if (freshCreds.secrets?.[target.name]) {
-      delete freshCreds.secrets[target.name];
-      writeCredentialFile(freshCreds);
+    const freshSecrets = readPluginSecrets();
+    if (freshSecrets[target.name]) {
+      delete freshSecrets[target.name];
+      writePluginSecrets(freshSecrets);
       ctx.appendMessage('system', chalk.green(`  Secret "${target.name}" removed.`));
       ctx.addLog('secrets', `Removed ${target.name}`);
     }
@@ -660,6 +645,9 @@ function cmdReset(ctx) {
   ctx.history.created = new Date().toISOString();
   ctx.history.lastUpdated = new Date().toISOString();
 
+  // Persist the cleared state to disk
+  if (typeof ctx.saveHistory === 'function') ctx.saveHistory(ctx.history);
+
   // Clear chat panel in TUI mode
   if (ctx.tui && ctx.tui.panels && ctx.tui.panels.chat) {
     ctx.tui.panels.chat.setContent('');
@@ -709,9 +697,6 @@ export async function processCommand(input, ctx) {
 
     case '/plugin':
       return cmdPlugin(args, ctx);
-
-    case '/god':
-      return cmdGod(ctx);
 
     case '/tools':
       return cmdTools(args, ctx);

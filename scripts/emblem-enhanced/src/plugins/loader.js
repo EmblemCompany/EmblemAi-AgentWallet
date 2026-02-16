@@ -1,6 +1,6 @@
 /**
  * Plugin Registration and Management
- * Loads built-in protocol plugins, god-mode, and user-installed custom plugins.
+ * Loads built-in protocol plugins and user-installed custom plugins.
  * ESM module — requires Node.js >= 18.
  */
 
@@ -30,18 +30,17 @@ export class PluginManager {
   }
 
   /**
-   * Load all available protocol plugins and god-mode.
+   * Load all available protocol plugins.
    * Missing packages are silently skipped.
    * @param {Record<string, object>} config - Per-plugin config keyed by configKey
    * @param {{ authSdk?: object, credentials?: object }} opts - Optional auth + credential context
    */
   async loadAll(config = {}, opts = {}) {
     this._pluginSpecs = [
-      { mod: '@hustle/plugin-bankr',    factory: 'createBankrPlugin',    configKey: 'bankr' },
-      { mod: '@hustle/plugin-a2a',      factory: 'createA2APlugin',      configKey: 'a2a' },
-      { mod: '@hustle/plugin-acp',      factory: 'createACPPlugin',      configKey: 'acp' },
-      { mod: '@hustle/plugin-elizaos',  factory: 'createElizaOSPlugin',  configKey: 'elizaos' },
-      { mod: '@hustle/plugin-bridge',   factory: 'createBridgePlugin',   configKey: 'bridge' },
+      { mod: '@agenthustle/plugin-masq',      factory: 'createElizaOSPlugin',  configKey: 'elizaos' },
+      // { mod: '@agenthustle/plugin-a2a',      factory: 'createA2APlugin',      configKey: 'a2a' },
+      // { mod: '@agenthustle/plugin-acp',      factory: 'createACPPlugin',      configKey: 'acp' },
+      // { mod: '@agenthustle/plugin-bridge',   factory: 'createBridgePlugin',   configKey: 'bridge' },
     ];
     this._config = config;
     this._opts = opts;
@@ -60,6 +59,13 @@ export class PluginManager {
         // Auto-enable MASQ for ElizaOS so the HTTP server starts
         if (spec.configKey === 'elizaos' && !pluginConfig.masq) {
           pluginConfig.masq = { enabled: true, port: 3001 };
+        }
+        // Enable inverse discovery — discover ElizaOS actions and register as clientTools
+        if (spec.configKey === 'elizaos' && !pluginConfig.inverseDiscovery) {
+          pluginConfig.inverseDiscovery = {
+            enabled: true,
+            elizaUrl: process.env.ELIZA_URL || 'http://localhost:3000',
+          };
         }
 
         // Check for encrypted secrets — defer decryption to first tool use (lazy loading)
@@ -86,15 +92,6 @@ export class PluginManager {
       } catch {
         // Plugin package not installed — skip
       }
-    }
-
-    // God-mode plugin (disabled by default, user enables via /god-mode)
-    try {
-      const { createGodModePlugin } = await import('./god-mode.js');
-      const godPlugin = createGodModePlugin({ pluginManager: this });
-      await this.register(godPlugin, false);
-    } catch {
-      // God-mode module not available
     }
 
     // Restore user-installed custom plugins from disk
@@ -212,7 +209,7 @@ export class PluginManager {
 
   /**
    * Set a value at a dot-path in a config object.
-   * e.g. _setConfigPath(cfg, 'bankrApi.apiKey', 'xyz') → cfg.bankrApi.apiKey = 'xyz'
+   * e.g. _setConfigPath(cfg, 'api.apiKey', 'xyz') → cfg.api.apiKey = 'xyz'
    * @private
    */
   _setConfigPath(config, dotPath, value) {
@@ -231,8 +228,8 @@ export class PluginManager {
    * Hot-reload a plugin with a secret value injected into its config.
    * Called after /secrets set so the user doesn't need to restart.
    *
-   * @param {string} pluginName - The plugin name (e.g. "hustle-bankr")
-   * @param {string} secretName - The secret name (e.g. "bankrApiKey")
+   * @param {string} pluginName - The plugin name (e.g. "hustle-elizaos")
+   * @param {string} secretName - The secret name (e.g. "myApiKey")
    * @param {string} plaintext - The decrypted/raw secret value
    * @returns {Promise<boolean>} Whether the reload succeeded
    */
@@ -433,7 +430,7 @@ export class PluginManager {
       ...sections,
       '',
       `Total: ${enabled.length} plugins, ${enabled.reduce((n, [, e]) => n + e.toolCount, 0)} client-side tools available.`,
-      'Use these tools proactively when they match the user\'s request. For example, if the user asks about trading or balances, use the bankr plugin tools. If they ask about agent discovery, use the a2a plugin tools.',
+      'Use these tools proactively when they match the user\'s request.',
     ].join('\n');
 
     return { role: 'system', content };
@@ -446,7 +443,7 @@ export class PluginManager {
   /**
    * Load custom plugins stored in ~/.emblemai-plugins.json.
    * Custom plugins use serialized executor code that is compiled at load time.
-   * This is an intentional god-mode feature for user-authored runtime extensions.
+   * Custom plugins use serialized executor code that is compiled at load time.
    * @private
    */
   async _loadCustomPlugins() {
@@ -464,14 +461,14 @@ export class PluginManager {
       if (!stored || !stored.name) continue;
 
       // Reconstitute executors from serialized code strings.
-      // This is intentional dynamic code execution for the god-mode plugin system —
+      // Dynamic code execution for custom plugins —
       // only user-authored code from their own ~/.emblemai-plugins.json is loaded.
       const executors = {};
       if (Array.isArray(stored.tools)) {
         for (const tool of stored.tools) {
           if (tool.executorCode) {
             try {
-              // God-mode: compile user-authored executor code
+              // Compile user-authored executor code
               executors[tool.name] = (0, eval)('(' + tool.executorCode + ')'); // indirect eval
             } catch {
               // Malformed executor — skip this tool

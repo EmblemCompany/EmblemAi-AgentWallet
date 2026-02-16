@@ -1,7 +1,7 @@
 {
   "name": "@emblemvault/agentwallet",
-  "version": "2.0.0",
-  "description": "CLI for EmblemVault Hustle AI - autonomous crypto wallet management with TUI",
+  "version": "3.0.2",
+  "description": "CLI for EmblemVault Hustle AI - autonomous crypto wallet management with browser auth, streaming, and plugins",
   "main": "emblemai.js",
   "type": "module",
   "bin": {
@@ -13,12 +13,13 @@
     "reset": "node emblemai.js --reset"
   },
   "dependencies": {
-    "hustle-incognito": "^0.5.2",
+    "@dotenvx/dotenvx": "^1.52.0",
     "@emblemvault/auth-sdk": "^2.3.16",
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.11.0",
     "chalk": "^5.3.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "hustle-incognito": "^1.0.4"
   },
   "keywords": [
     "ai",

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * EmblemAI v2.0 — Agent Command & Control
+ * EmblemAI — Agent Command & Control
  *
  * Interactive mode (default):
  *   emblemai -p "password"
@@ -19,13 +19,16 @@ import path from 'path';
 import os from 'os';
 import readline from 'readline';
 import chalk from 'chalk';
-import { getPassword, authenticate, promptPassword, authMenu, readCredentialFile, writeCredentialFile } from './src/auth.js';
+import { getPassword, authenticate, webLogin, promptPassword, authMenu, readPluginSecrets, migrateLegacyCredentials } from './src/auth.js';
 import { processCommand } from './src/commands.js';
 import { PluginManager } from './src/plugins/loader.js';
 import * as glow from './src/glow.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { version: PKG_VERSION } = require('./package.json');
 
-// History file location
-const HISTORY_FILE = path.join(os.homedir(), '.emblemai-history.json');
+// History directory — partitioned by vaultId
+const HISTORY_DIR = path.join(os.homedir(), '.emblemai', 'history');
 
 // ── Formatting (hustle-v5 style) ────────────────────────────────────────────
 
@@ -109,14 +112,13 @@ const messageArg = getArg(['--message', '-m']);
 const hustleUrlArg = getArg(['--hustle-url']);
 const authUrlArg = getArg(['--auth-url']);
 const apiUrlArg = getArg(['--api-url']);
-const elizaUrlArg = getArg(['--eliza-url']);
 const logFileArg = getArg(['--log-file']);
+const restoreAuthArg = getArg(['--restore-auth']);
 
 // Endpoint overrides
 const hustleApiUrl = hustleUrlArg || process.env.HUSTLE_API_URL || undefined;
 const authUrl = authUrlArg || process.env.EMBLEM_AUTH_URL || undefined;
 const apiUrl = apiUrlArg || process.env.EMBLEM_API_URL || undefined;
-const elizaApiUrl = elizaUrlArg || process.env.ELIZA_API_URL || undefined;
 
 // ── Stream Logger ──────────────────────────────────────────────────────────
 
@@ -153,20 +155,46 @@ function log(tag, data) {
   fs.writeSync(_logFd, line);
 }
 
-// ── History Management ──────────────────────────────────────────────────────
+// ── History Management (per-vault) ───────────────────────────────────────────
 
-function loadHistory() {
+function historyPath(vaultId) {
+  return path.join(HISTORY_DIR, `${vaultId}.json`);
+}
+
+function loadHistory(vaultId) {
   try {
-    if (fs.existsSync(HISTORY_FILE)) {
-      return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+    const fp = historyPath(vaultId);
+    if (fs.existsSync(fp)) {
+      return JSON.parse(fs.readFileSync(fp, 'utf8'));
     }
   } catch {}
-  return { messages: [], created: new Date().toISOString() };
+  return { vaultId, messages: [], created: new Date().toISOString() };
 }
 
 function saveHistory(history) {
+  fs.mkdirSync(HISTORY_DIR, { recursive: true });
   history.lastUpdated = new Date().toISOString();
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+  fs.writeFileSync(historyPath(history.vaultId), JSON.stringify(history, null, 2));
+}
+
+function clearHistory(vaultId) {
+  const fp = historyPath(vaultId);
+  if (fs.existsSync(fp)) fs.unlinkSync(fp);
+}
+
+/** Migrate legacy single-file history into per-vault directory */
+function migrateHistory(vaultId) {
+  const legacyFile = path.join(os.homedir(), '.emblemai-history.json');
+  if (!fs.existsSync(legacyFile)) return;
+  try {
+    const data = JSON.parse(fs.readFileSync(legacyFile, 'utf8'));
+    if (data.messages && data.messages.length > 0) {
+      data.vaultId = vaultId;
+      fs.mkdirSync(HISTORY_DIR, { recursive: true });
+      fs.writeFileSync(historyPath(vaultId), JSON.stringify(data, null, 2));
+    }
+    fs.unlinkSync(legacyFile);
+  } catch {}
 }
 
 function buildMessages(msgs, pluginManager) {
@@ -191,9 +219,9 @@ async function showSplash() {
         align: 'center', valign: 'middle',
         content: [
           '', '{bold}{cyan-fg}EMBLEM AI{/}', '',
-          '{white-fg}Agent Command & Control — God Mode{/}',
+          '{white-fg}Agent Command & Control{/}',
           '{gray-fg}Powered by Hustle Incognito{/}',
-          '', '{dim-fg}Initializing...{/}', '',
+          '', '{gray-fg}Initializing...{/}', '',
         ].join('\\n'),
       });
       screen.render();
@@ -231,24 +259,91 @@ function stopSpinner() {
 
 async function main() {
   try {
-    // Handle --reset
-    if (isReset) {
-      if (fs.existsSync(HISTORY_FILE)) fs.unlinkSync(HISTORY_FILE);
-      console.log('Conversation history cleared.');
+    // ── Restore auth backup ──────────────────────────────────────────────
+    if (restoreAuthArg) {
+      const backupPath = path.resolve(restoreAuthArg);
+      if (!fs.existsSync(backupPath)) {
+        console.error(fmt.error(`Backup file not found: ${backupPath}`));
+        process.exit(1);
+      }
+
+      try {
+        const backup = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        if (!backup.env || !backup.envKeys) {
+          console.error(fmt.error('Invalid backup file — missing credentials.'));
+          process.exit(1);
+        }
+
+        const emblemDir = path.join(os.homedir(), '.emblemai');
+        fs.mkdirSync(emblemDir, { recursive: true, mode: 0o700 });
+
+        fs.writeFileSync(path.join(emblemDir, '.env'), backup.env, { mode: 0o600 });
+        fs.writeFileSync(path.join(emblemDir, '.env.keys'), backup.envKeys, { mode: 0o600 });
+
+        if (backup.secrets) {
+          fs.writeFileSync(path.join(emblemDir, 'secrets.json'), backup.secrets, { mode: 0o600 });
+        }
+
+        console.log(fmt.success('Auth restored from backup.'));
+        console.log(chalk.dim('  Run emblemai to start.'));
+      } catch (err) {
+        console.error(fmt.error(`Failed to restore: ${err.message}`));
+        process.exit(1);
+      }
       process.exit(0);
     }
 
+    // ── Migrate legacy credentials ───────────────────────────────────────
+    migrateLegacyCredentials();
+
     // ── Authenticate ──────────────────────────────────────────────────────
-    const password = await getPassword({ password: passwordArg, isAgentMode });
+    let authSdk;
 
-    if (!password || password.length < 16) {
-      console.error(fmt.error('Password must be at least 16 characters.'));
-      process.exit(1);
+    if (isAgentMode || isReset || passwordArg) {
+      // Agent mode, reset, or explicit -p flag: password auth (unchanged)
+      const password = await getPassword({ password: passwordArg, isAgentMode: isAgentMode || isReset });
+
+      if (!password || password.length < 16) {
+        console.error(fmt.error('Password must be at least 16 characters.'));
+        process.exit(1);
+      }
+
+      if (!isAgentMode && !isReset) console.log(chalk.dim('\nAuthenticating with Agent Hustle...'));
+
+      ({ authSdk } = await authenticate(password, { authUrl, apiUrl }));
+    } else {
+      // Interactive mode: try web-based auth
+      console.log(chalk.dim('\nChecking for saved session...'));
+      const result = await webLogin({ authUrl, apiUrl });
+
+      if (result) {
+        ({ authSdk } = result);
+        console.log(fmt.success(result.source === 'saved' ? 'Authenticated via saved session' : 'Authenticated via browser'));
+      } else {
+        // Web login failed or was cancelled — fall back to password
+        console.log(chalk.dim('Falling back to password authentication...'));
+        const password = await getPassword({});
+
+        if (!password || password.length < 16) {
+          console.error(fmt.error('Password must be at least 16 characters.'));
+          process.exit(1);
+        }
+
+        console.log(chalk.dim('\nAuthenticating with Agent Hustle...'));
+        ({ authSdk } = await authenticate(password, { authUrl, apiUrl }));
+      }
     }
+    const vaultId = authSdk.getSession()?.user?.vaultId;
 
-    if (!isAgentMode) console.log(chalk.dim('\nAuthenticating with Agent Hustle...'));
+    // Migrate legacy single-file history to per-vault
+    migrateHistory(vaultId);
 
-    const { authSdk } = await authenticate(password, { authUrl, apiUrl });
+    // Handle --reset (needs auth to know which vault)
+    if (isReset) {
+      clearHistory(vaultId);
+      console.log('Conversation history cleared.');
+      process.exit(0);
+    }
 
     // ── Create Hustle Client ──────────────────────────────────────────────
     const { HustleIncognitoClient } = await import('hustle-incognito');
@@ -265,7 +360,6 @@ async function main() {
       retainHistory: true,
       selectedTools: [],
       model: null,
-      godMode: false,
       glowEnabled: glow.detectGlow().installed,
       log: initialLog,
     };
@@ -273,20 +367,14 @@ async function main() {
     if (settings.log) logOpen();
 
     let lastIntentContext = null;
-    let history = loadHistory();
+    let history = loadHistory(vaultId);
 
     // ── Plugin Manager ────────────────────────────────────────────────────
     const pluginManager = new PluginManager(client);
 
-    // Build per-plugin config from credential file + env vars
-    const creds = readCredentialFile() || {};
-    const bankrKey = process.env.BANKR_API_KEY || creds.bankrApiKey;
-    const pluginConfig = bankrKey ? { bankr: { bankrApi: { apiKey: bankrKey } } } : {};
-
-    // Wire ElizaOS plugin config with API URL if provided
-    if (elizaApiUrl) {
-      pluginConfig.elizaos = { ...(pluginConfig.elizaos || {}), elizaApiUrl };
-    }
+    // Build per-plugin config from env vars
+    const pluginSecrets = readPluginSecrets();
+    const pluginConfig = {};
 
     // ══════════════════════════════════════════════════════════════════════
     // AGENT MODE — single message, output, exit
@@ -298,7 +386,7 @@ async function main() {
         process.exit(1);
       }
 
-      await pluginManager.loadAll(pluginConfig, { authSdk, credentials: creds });
+      await pluginManager.loadAll(pluginConfig, { authSdk, credentials: { secrets: pluginSecrets } });
 
       process.stdout.write(chalk.dim('Thinking'));
       const progressInterval = setInterval(() => process.stdout.write(chalk.dim('.')), 2000);
@@ -329,22 +417,27 @@ async function main() {
     await showSplash();
 
     // Show banner after splash
+    const W = 59; // inner width between ║ borders
+    const pad = (s, visible) => s + ' '.repeat(Math.max(0, W - visible));
     console.log('');
-    console.log(fmt.brand('╔═══════════════════════════════════════════════════════════╗'));
-    console.log(fmt.brand('║') + '                                                           ' + fmt.brand('║'));
-    console.log(fmt.brand('║') + `   ${chalk.bold.white('⚡ EMBLEM AI')} ${chalk.dim('— Agent Command & Control')}                  ` + fmt.brand('║'));
-    console.log(fmt.brand('║') + '                                                           ' + fmt.brand('║'));
-    console.log(fmt.brand('║') + `   ${chalk.dim('Powered by Hustle Incognito — God Mode')}                  ` + fmt.brand('║'));
-    console.log(fmt.brand('║') + '                                                           ' + fmt.brand('║'));
-    console.log(fmt.brand('╚═══════════════════════════════════════════════════════════╝'));
+    console.log(fmt.brand('╔' + '═'.repeat(W) + '╗'));
+    console.log(fmt.brand('║') + ' '.repeat(W) + fmt.brand('║'));
+    const title = `   ⚡ EMBLEM AI v${PKG_VERSION} — Agent Command & Control`;
+    const titleLen = title.length + 1; // ⚡ renders as 2 columns
+    console.log(fmt.brand('║') + pad(`   ${chalk.bold.white('⚡ EMBLEM AI')} ${chalk.dim(`v${PKG_VERSION} — Agent Command & Control`)}`, titleLen) + fmt.brand('║'));
+    console.log(fmt.brand('║') + ' '.repeat(W) + fmt.brand('║'));
+    const sub = '   Powered by Hustle Incognito';
+    console.log(fmt.brand('║') + pad(`   ${chalk.dim('Powered by Hustle Incognito')}`, sub.length) + fmt.brand('║'));
+    console.log(fmt.brand('║') + ' '.repeat(W) + fmt.brand('║'));
+    console.log(fmt.brand('╚' + '═'.repeat(W) + '╝'));
     console.log('');
 
     // Load plugins
     console.log(chalk.dim('  Loading plugins...'));
-    await pluginManager.loadAll(pluginConfig, { authSdk, credentials: creds });
+    await pluginManager.loadAll(pluginConfig, { authSdk, credentials: { secrets: pluginSecrets } });
     const pluginList = pluginManager.list();
     const enabledPlugins = pluginList.filter(p => p.enabled);
-    console.log(fmt.success(`${enabledPlugins.length} plugins loaded (${enabledPlugins.map(p => p.name.replace('@hustle/', '')).join(', ')})`));
+    console.log(fmt.success(`${enabledPlugins.length} plugins loaded (${enabledPlugins.map(p => p.name.replace('@agenthustle/', '')).join(', ')})`));
 
     // Show connection info
     try {
@@ -367,7 +460,7 @@ async function main() {
       input: process.stdin,
       output: process.stdout,
       completer: (line) => {
-        const cmds = ['/help', '/plugins', '/tools', '/god', '/auth', '/wallet',
+        const cmds = ['/help', '/plugins', '/tools', '/auth', '/wallet',
           '/portfolio', '/model', '/stream', '/debug', '/history', '/payment',
           '/secrets', '/glow', '/log', '/reset', '/exit', '/settings'];
         const hits = cmds.filter(c => c.startsWith(line));
@@ -377,7 +470,7 @@ async function main() {
     const prompt = () => new Promise(r => rl.question(chalk.cyan('emblem> '), r));
 
     const ctx = {
-      client, settings, pluginManager, history, tui: null, authSdk, glow,
+      client, settings, pluginManager, history, tui: null, authSdk, glow, saveHistory,
       promptText: (q) => new Promise(r => rl.question(q, r)),
       promptPassword,
       addLog: (type, msg) => {
@@ -414,6 +507,11 @@ async function main() {
       // Slash commands
       if (trimmed.startsWith('/')) {
         const result = await processCommand(trimmed, ctx);
+        if (result.logout) {
+          logClose();
+          console.log(chalk.dim('\nSession ended. Run emblemai again to log in.\n'));
+          break;
+        }
         if (result.handled) continue;
       }
 

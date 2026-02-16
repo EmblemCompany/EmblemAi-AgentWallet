@@ -12,11 +12,11 @@ import blessed from 'blessed';
  */
 export function createTUI(opts = {}) {
   const screen = blessed.screen({
-    smartCSR: false, // Disable smart CSR — redraws full screen to avoid tmux artifacts
+    smartCSR: false,
     fastCSR: false,
     title: opts.title || 'EMBLEM AI - Agent Command & Control',
     mouse: true,
-    fullUnicode: false, // Avoid Unicode box-drawing corruption in tmux
+    fullUnicode: false,
     autoPadding: false,
     warnings: false,
   });
