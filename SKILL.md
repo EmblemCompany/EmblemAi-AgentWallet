@@ -14,15 +14,26 @@ metadata:
 
 # Emblem Agent Wallet
 
-Connect to **Agent Hustle** -- EmblemVault's autonomous crypto AI with 256+ trading tools across 7 blockchains. Browser auth, streaming responses, plugin system, and zero-config agent mode.
+Connect to **Agent Hustle** -- EmblemVault's autonomous crypto AI with 250+ trading tools across 7 blockchains. Browser auth, streaming responses, plugin system, and zero-config agent mode.
+
+**Requires the CLI**: `npm install -g @emblemvault/agentwallet`
 
 ---
 
 ## Quick Start -- How to Use This Skill
 
+**Step 1: Install the CLI**
+
+```bash
+npm install -g @emblemvault/agentwallet
+```
+
+This provides a single command: `emblemai`
+
+**Step 2: Use it**
+
 When this skill loads, you can ask Agent Hustle anything about crypto:
 
-**Example commands to try:**
 - "What are my wallet addresses?"
 - "Show my balances across all chains"
 - "What's trending on Solana?"
@@ -35,15 +46,7 @@ When this skill loads, you can ask Agent Hustle anything about crypto:
 - "Connect to EmblemVault"
 - "Check my crypto portfolio"
 
----
-
-## Installation
-
-```bash
-npm install -g @emblemvault/agentwallet
-```
-
-This provides a single unified command: `emblemai`
+All requests are routed through `emblemai` under the hood.
 
 ---
 
@@ -132,6 +135,14 @@ Any system that can shell out to a CLI can give its agents a wallet:
 # OpenClaw, CrewAI, AutoGPT, or any agent framework
 emblemai --agent -m "Send 0.1 SOL to <address>"
 emblemai --agent -m "Swap 100 USDC to ETH on Base"
+emblemai --agent -m "What tokens do I hold across all chains?"
+```
+
+Each password produces a unique, deterministic wallet. To give multiple agents separate wallets, use different passwords:
+
+```bash
+emblemai --agent -p "agent-alice-wallet-001" -m "My addresses?"
+emblemai --agent -p "agent-bob-wallet-002" -m "My addresses?"
 ```
 
 ### Interactive Mode (For Humans)
@@ -142,23 +153,29 @@ emblemai -p "$PASSWORD"  # Password auth
 ```
 
 **Interactive Commands:**
+
 | Command | Description |
 |---------|-------------|
 | `/help` | Show all commands |
 | `/settings` | Show current config |
-| `/auth` | Open auth menu (session info, addresses, backup, logout) |
+| `/auth` | Auth menu (session info, addresses, backup, logout) |
 | `/wallet` | Show wallet addresses |
 | `/portfolio` | Show portfolio |
 | `/plugins` | List all plugins with status |
 | `/plugin <name> on\|off` | Toggle a plugin |
 | `/tools` | List available tools |
 | `/tools add\|remove <id>` | Manage tools |
+| `/tools clear` | Enable auto-tools mode |
 | `/stream on\|off` | Toggle streaming mode |
 | `/debug on\|off` | Toggle debug mode |
 | `/history on\|off` | Toggle history retention |
 | `/payment` | PAYG billing status |
+| `/payment enable\|disable` | Toggle PAYG billing |
+| `/payment token <T>` | Set payment token |
+| `/payment mode <M>` | Set payment mode |
 | `/secrets` | Manage encrypted plugin secrets |
-| `/glow on\|off` | Toggle markdown rendering |
+| `/glow on\|off` | Toggle glow markdown rendering |
+| `/log on\|off` | Toggle stream logging |
 | `/model <id>` | Set model (or "clear" to reset) |
 | `/reset` | Clear conversation history |
 | `/exit` | Exit the CLI |
@@ -197,6 +214,9 @@ emblemai --reset
 | `EMBLEM_AUTH_URL` | Override auth service endpoint |
 | `EMBLEM_API_URL` | Override API service endpoint |
 | `ELIZA_URL` | ElizaOS agent URL for inverse discovery |
+| `ELIZA_API_URL` | Override ElizaOS API URL |
+
+CLI arguments override environment variables when both are provided.
 
 ---
 
@@ -211,6 +231,8 @@ Hustle AI interprets terse commands as "$0" transactions. Always explain your in
 | `"SOL balance"` | `"What is my current SOL balance on Solana?"` |
 | `"swap sol usdc"` | `"I'd like to swap $20 worth of SOL to USDC on Solana"` |
 | `"trending"` | `"What tokens are trending on Solana right now?"` |
+
+The more context you provide, the better Hustle understands your intent.
 
 ---
 
@@ -240,6 +262,29 @@ Hustle AI interprets terse commands as "$0" transactions. Always explain your in
 
 Manage plugins with `/plugins` and `/plugin <name> on|off`. Plugins can declare encrypted secrets managed via `/secrets`.
 
+Plugins follow the `HustlePlugin` interface:
+
+```typescript
+{
+  name: 'plugin-name',
+  version: '1.0.0',
+  tools: [{
+    name: 'tool_name',
+    description: 'What the tool does',
+    parameters: { type: 'object', properties: { ... } },
+  }],
+  executors: {
+    tool_name: async (args) => { /* implementation */ },
+  },
+  hooks: {
+    beforeRequest: async (messages) => messages,
+    afterResponse: async (response) => response,
+  }
+}
+```
+
+Custom plugins are stored in `~/.emblemai-plugins.json` and loaded at startup.
+
 ---
 
 ## Wallet Addresses
@@ -254,6 +299,18 @@ Each password deterministically generates wallet addresses across all chains:
 | **Bitcoin** | Taproot, SegWit, and Legacy addresses |
 
 Ask Hustle: `"What are my wallet addresses?"` to retrieve all addresses.
+
+---
+
+## Auth Backup and Restore
+
+The `/auth` menu includes a **Backup Agent Auth** option that exports your credentials to a single JSON file. To restore on another machine:
+
+```bash
+emblemai --restore-auth ~/emblemai-auth-backup.json
+```
+
+This places the credential files in `~/.emblemai/` and you're ready to go.
 
 ---
 
@@ -286,6 +343,9 @@ Ask Hustle: `"What are my wallet addresses?"` to retrieve all addresses.
 | `~/.emblemai/session.json` | Saved browser auth session |
 | `~/.emblemai/history/{vaultId}.json` | Conversation history (per vault) |
 | `~/.emblemai-stream.log` | Stream log (when enabled) |
+| `~/.emblemai-plugins.json` | Custom plugin definitions |
+
+Legacy credentials (`~/.emblem-vault`) are automatically migrated to the new dotenvx-encrypted format on first run.
 
 ---
 
@@ -294,12 +354,13 @@ Ask Hustle: `"What are my wallet addresses?"` to retrieve all addresses.
 | Issue | Solution |
 |-------|----------|
 | `emblemai: command not found` | Run: `npm install -g @emblemvault/agentwallet` |
-| `Authentication failed` | Check password is 16+ characters |
+| "Password must be at least 16 characters" | Use a longer password |
+| "Authentication failed" | Check network connectivity to auth service |
 | Browser doesn't open for auth | Copy the printed URL and open it manually |
 | Session expired | Run `emblemai` again -- browser will open for fresh login |
-| `Empty response` | Retry -- Hustle AI may be temporarily unavailable |
-| **Slow response** | Normal -- queries can take up to 2 minutes |
+| glow not rendering | Install glow: `brew install glow` (optional) |
 | Plugin not loading | Check that the npm package is installed |
+| **Slow response** | Normal -- queries can take up to 2 minutes |
 
 ---
 
@@ -314,6 +375,9 @@ npm update -g @emblemvault/agentwallet
 ## Quick Reference
 
 ```bash
+# Install
+npm install -g @emblemvault/agentwallet
+
 # Interactive mode (browser auth -- recommended)
 emblemai
 
@@ -330,3 +394,12 @@ emblemai --agent -m "Show my portfolio"
 # Reset conversation history
 emblemai --reset
 ```
+
+---
+
+## Links
+
+- [npm package](https://www.npmjs.com/package/@emblemvault/agentwallet)
+- [EmblemVault](https://emblemvault.dev)
+- [Hustle AI](https://agenthustle.ai)
+- [GitHub](https://github.com/EmblemCompany/EmblemAi-AgentWallet)
