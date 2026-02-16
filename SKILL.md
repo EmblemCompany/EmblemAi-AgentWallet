@@ -397,6 +397,26 @@ emblemai --reset
 
 ---
 
+## References
+
+Detailed API documentation for the full Emblem AI ecosystem:
+
+| Reference | Description |
+|-----------|-------------|
+| [agentwallet.md](references/agentwallet.md) | CLI reference -- flags, commands, auth, agent frameworks |
+| [ai-tools.md](references/ai-tools.md) | 250+ built-in AI tools (trading, DeFi, market data, NFTs) |
+| [plugins.md](references/plugins.md) | Custom plugin development guide |
+| [auth-sdk.md](references/auth-sdk.md) | Core authentication SDK |
+| [auth-react.md](references/auth-react.md) | React auth hooks and components |
+| [signing.md](references/signing.md) | Transaction signing (EVM, Solana, Bitcoin) |
+| [hustle-incognito.md](references/hustle-incognito.md) | AI SDK for Node.js / vanilla JS |
+| [hustle-react.md](references/hustle-react.md) | React AI chat components |
+| [react-components.md](references/react-components.md) | Full component API reference |
+| [migratefun-react.md](references/migratefun-react.md) | Migrate.fun React hooks and components |
+| [reflexive.md](references/reflexive.md) | AI app introspection and debugging |
+
+---
+
 ## Links
 
 - [npm package](https://www.npmjs.com/package/@emblemvault/agentwallet)
