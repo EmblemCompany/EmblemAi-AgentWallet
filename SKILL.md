@@ -1,15 +1,9 @@
 ---
 name: emblem-ai-agent-wallet
 description: Connect to EmblemVault and manage crypto wallets via Emblem AI - Agent Hustle. Supports Solana, Ethereum, Base, BSC, Polygon, Hedera, and Bitcoin. Use when the user wants to trade crypto, check balances, swap tokens, or interact with blockchain wallets.
-metadata:
-  emoji: "🛡️"
-  homepage: "https://emblemvault.dev"
-  primaryEnv: "EMBLEM_PASSWORD"
-  requires: "node, npm, emblemai"
-  install: "npm install -g @emblemvault/agentwallet"
-  author: "EmblemCompany"
-  version: "3.0.3"
-
+homepage: https://emblemvault.dev
+user-invocable: true
+metadata: {"openclaw":{"emoji":"🛡️","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblemai"],"env":["EMBLEM_PASSWORD"]},"install":[{"id":"npm","kind":"npm","package":"@emblemvault/agentwallet","bins":["emblemai"],"label":"Install Agent Wallet CLI"}]}}
 ---
 
 # Emblem Agent Wallet
@@ -139,23 +133,21 @@ If no credentials are found, ask the user:
 
 ---
 
-## Important: Execution Rules
+## Execution Notes
 
-**DO NOT impose timeouts.** Hustle AI queries can take up to 2 minutes. This is normal behavior, not a stall.
+**Allow sufficient time.** Hustle AI queries may take up to 2 minutes for complex operations (trading, cross-chain lookups). The CLI outputs progress dots every 5 seconds to indicate it's working.
 
-**DO NOT assume Hustle is stalled.** The CLI outputs progress dots every 5 seconds to indicate it's working. Wait for the response to complete naturally.
-
-**Cleanup before next request.** Ensure no leftover emblemai processes are running before starting a new query:
+**Cleanup between requests.** Ensure no leftover emblemai processes are running before starting a new query:
 ```bash
 pkill -f emblemai 2>/dev/null || true
 ```
 
-**Present Hustle's response EXACTLY as received.** Do not paraphrase, summarize, or modify Hustle AI's response. Display it to the user in a markdown codeblock:
+**Present Hustle's response clearly.** Display the response from Hustle AI to the user in a markdown codeblock:
 
 ```markdown
 **Hustle AI Response:**
 \`\`\`
-[exact response from Hustle goes here, unmodified]
+[response from Hustle]
 \`\`\`
 ```
 
