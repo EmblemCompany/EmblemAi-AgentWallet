@@ -8,7 +8,7 @@ metadata:
   requires: "node, npm, emblemai"
   install: "npm install -g @emblemvault/agentwallet"
   author: "EmblemCompany"
-  version: "3.0.2"
+  version: "3.0.3"
 
 ---
 
