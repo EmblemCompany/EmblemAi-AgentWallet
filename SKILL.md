@@ -3,7 +3,7 @@ name: emblem-ai-agent-wallet
 description: Connect to EmblemVault and manage crypto wallets via Emblem AI - Agent Hustle. Supports Solana, Ethereum, Base, BSC, Polygon, Hedera, and Bitcoin. Use when the user wants to trade crypto, check balances, swap tokens, or interact with blockchain wallets.
 homepage: https://emblemvault.dev
 user-invocable: true
-metadata: {"openclaw":{"emoji":"🛡️","version":"3.0.4","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblemai"],"env":["EMBLEM_PASSWORD"]},"install":[{"id":"npm","kind":"npm","package":"@emblemvault/agentwallet","bins":["emblemai"],"label":"Install Agent Wallet CLI"}]}}
+metadata: {"openclaw":{"emoji":"🛡️","version":"3.0.5","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblemai"],"env":["EMBLEM_PASSWORD"]},"install":[{"id":"npm","kind":"npm","package":"@emblemvault/agentwallet","bins":["emblemai"],"label":"Install Agent Wallet CLI"}]}}
 ---
 
 # Emblem Agent Wallet
@@ -107,7 +107,6 @@ In agent mode, if no password is provided, a secure random password is auto-gene
 2. A deterministic vault is derived -- same credentials always yield the same vault
 3. The session provides wallet addresses across multiple chains: Solana, Ethereum, Base, BSC, Polygon, Hedera, Bitcoin
 4. `HustleIncognitoClient` is initialized with the session
-5. Plugins are loaded and registered with the client
 
 ### Credential Discovery
 
@@ -136,11 +135,6 @@ If no credentials are found, ask the user:
 ## Execution Notes
 
 **Allow sufficient time.** Hustle AI queries may take up to 2 minutes for complex operations (trading, cross-chain lookups). The CLI outputs progress dots every 5 seconds to indicate it's working.
-
-**Cleanup between requests.** Ensure no leftover emblemai processes are running before starting a new query:
-```bash
-pkill -f emblemai 2>/dev/null || true
-```
 
 **Present Hustle's response clearly.** Display the response from Hustle AI to the user in a markdown codeblock:
 
@@ -288,21 +282,6 @@ The `/auth` menu provides:
 | `/payment token <TOKEN>` | Set payment token (SOL, ETH, HUSTLE, etc.) |
 | `/payment mode <MODE>` | Set payment mode: `pay_per_request` or `debt_accumulation` |
 
-### Plugin Management
-
-| Command | Description |
-|---------|-------------|
-| `/plugins` | List all plugins with enabled/disabled status |
-| `/plugin <name> on\|off` | Toggle a plugin by name |
-
-### Secrets
-
-| Command | Description |
-|---------|-------------|
-| `/secrets` | Manage encrypted plugin secrets (interactive menu) |
-
-Secrets are encrypted with your vault key and stored in `~/.emblemai/secrets.json`. Plugins are hot-reloaded after setting a secret (no restart needed).
-
 ### Markdown Rendering
 
 | Command | Description |
@@ -359,8 +338,6 @@ Log file defaults to `~/.emblemai-stream.log`. Override with `--log-file <path>`
 | `HUSTLE_API_URL` | Override Hustle API endpoint |
 | `EMBLEM_AUTH_URL` | Override auth service endpoint |
 | `EMBLEM_API_URL` | Override API service endpoint |
-| `ELIZA_URL` | ElizaOS agent URL for inverse discovery (default: `http://localhost:3000`) |
-| `ELIZA_API_URL` | Override ElizaOS API URL |
 
 CLI arguments override environment variables when both are provided.
 
@@ -394,71 +371,6 @@ The more context you provide, the better Hustle understands your intent.
 | **Bridges** | Cross-chain swaps via ChangeNow |
 | **Memecoins** | Pump.fun discovery, trending analysis |
 | **Predictions** | PolyMarket betting and positions |
-
----
-
-## Plugins
-
-### Active Plugin
-
-#### ElizaOS -- AI Agent Framework
-
-**Package**: `@agenthustle/plugin-masq`
-**Status**: Loaded by default
-
-Connects Hustle to the ElizaOS agent framework. Provides MASQ mode (HTTP server on port 3001) and inverse discovery to discover and register ElizaOS actions as client tools.
-
-**Auto-configured at startup:**
-- **MASQ**: Enabled on port 3001 -- exposes Hustle as an ElizaOS-compatible HTTP agent
-- **Inverse discovery**: Enabled -- discovers actions from a running ElizaOS instance and registers them as client tools
-- **Hustle client**: Wired automatically for inverse control (ElizaOS actions route through `hustleClient.chat()`)
-
-**Environment variables:**
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ELIZA_URL` | ElizaOS agent URL for inverse discovery | `http://localhost:3000` |
-| `ELIZA_API_URL` | ElizaOS API URL (via `--eliza-url` flag) | -- |
-
-### Available Plugins (Not Loaded)
-
-The following plugins exist as packages but are currently disabled. They can be re-enabled via `/plugin <name> on`.
-
-| Plugin | Package | Description |
-|--------|---------|-------------|
-| A2A | `@agenthustle/plugin-a2a` | Google Agent-to-Agent protocol v0.3.0 (discovery, messaging, tasks) |
-| ACP | `@agenthustle/plugin-acp` | Virtuals Agent Commerce Protocol (marketplace, jobs, autonomous mode) |
-| Bridge | `@agenthustle/plugin-bridge` | Cross-protocol message router (A2A, ACP, ElizaOS) |
-
-### Plugin Architecture
-
-Plugins follow the `HustlePlugin` interface:
-
-```typescript
-{
-  name: 'plugin-name',
-  version: '1.0.0',
-  tools: [{
-    name: 'tool_name',
-    description: 'What the tool does',
-    parameters: { type: 'object', properties: { ... } },
-  }],
-  executors: {
-    tool_name: async (args) => { /* implementation */ },
-  },
-  hooks: {
-    beforeRequest: async (messages) => messages,
-    afterResponse: async (response) => response,
-    onError: async (error) => null,
-  }
-}
-```
-
-**Loading**: Plugins are loaded via `PluginManager.loadAll()`. Each plugin spec declares a `mod` (npm package name), `factory` (exported factory function), and `configKey` (per-plugin config key). Missing packages are silently skipped.
-
-**Secrets**: Plugins can declare secrets (e.g., API keys) that are encrypted with the user's vault key and stored in `~/.emblemai/secrets.json`. Secrets are lazily decrypted on first tool use. Use `/secrets` to manage them interactively. Plugins are hot-reloaded after setting a secret (no restart needed).
-
-**Custom plugins**: User-created plugins are stored in `~/.emblemai-plugins.json` and loaded at startup. Custom plugins use serialized executor code that is compiled at load time.
 
 ---
 
@@ -518,13 +430,11 @@ This places the credential files in `~/.emblemai/` so you can authenticate immed
 |------|---------|
 | `~/.emblemai/.env` | dotenvx-encrypted credentials (EMBLEM_PASSWORD) |
 | `~/.emblemai/.env.keys` | dotenvx private decryption key (chmod 600) |
-| `~/.emblemai/secrets.json` | Encrypted plugin secrets |
 | `~/.emblemai/session.json` | Saved browser auth session (auto-managed) |
 | `~/.emblemai/history/{vaultId}.json` | Conversation history (per vault) |
 | `~/.emblemai-stream.log` | Stream log (when enabled) |
-| `~/.emblemai-plugins.json` | Custom plugin definitions |
 
-Legacy credentials (`~/.emblem-vault`) are automatically migrated to the new dotenvx-encrypted format on first run. The old file is backed up to `~/.emblem-vault.bak`.
+Legacy credentials (`~/.emblem-vault`) are automatically migrated to the encrypted format on first run.
 
 ---
 
@@ -539,7 +449,6 @@ Legacy credentials (`~/.emblem-vault`) are automatically migrated to the new dot
 | Session expired | Run `emblemai` again -- browser will open for fresh login |
 | glow not rendering | Install glow: `brew install glow` (optional, falls back to plain text) |
 | Plugin not loading | Check that the npm package is installed |
-| MASQ not responding on :3001 | Check ElizaOS plugin loaded via `/plugins` |
 | **Slow response** | Normal -- queries can take up to 2 minutes |
 
 ---
