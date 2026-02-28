@@ -61,8 +61,8 @@ npm install -g @emblemvault/agentwallet
 ### From source
 
 ```bash
-git clone https://github.com/EmblemCompany/EmblemAi-AgentWallet.git
-cd EmblemAi-AgentWallet
+git clone https://github.com/EmblemCompany/EmblemAi-cli.git
+cd EmblemAi-cli
 npm install
 npm link   # makes `emblemai` available globally
 ```
