@@ -1,6 +1,6 @@
 ---
 name: emblem-ai-agent-wallet
-description: Connect to EmblemVault and manage crypto wallets via Emblem AI - Agent Hustle. Supports Solana, Ethereum, Base, BSC, Polygon, Hedera, and Bitcoin. Use when the user wants to trade crypto, check balances, swap tokens, interact with blockchain wallets, or create and use profile-scoped agent wallets.
+description: Connect to EmblemVault and manage crypto wallets via EmblemAI. Supports Solana, Ethereum, Base, BSC, Polygon, Hedera, and Bitcoin. Use when the user wants to trade crypto, check balances, swap tokens, interact with blockchain wallets, or create and use profile-scoped agent wallets.
 homepage: https://emblemvault.dev
 user-invocable: true
 metadata: {"openclaw":{"emoji":"🛡️","version":"3.0.8","homepage":"https://emblemvault.dev","primaryEnv":"EMBLEM_PASSWORD","requires":{"bins":["node","npm","emblemai"]},"config_paths":["~/.emblemai/active-profile","~/.emblemai/profiles/"],"install":[{"id":"npm","kind":"npm","package":"@emblemvault/agentwallet","bins":["emblemai"],"label":"Install Agent Wallet CLI"}]}}
@@ -8,7 +8,7 @@ metadata: {"openclaw":{"emoji":"🛡️","version":"3.0.8","homepage":"https://e
 
 # Emblem Agent Wallet
 
-Connect to **Agent Hustle** -- EmblemVault's autonomous crypto AI with 250+ trading tools across 7 blockchains. Browser auth, streaming responses, profile-scoped local state, plugin system, and zero-config agent mode.
+Connect to **EmblemAI** -- EmblemVault's autonomous crypto AI with 250+ trading tools across 7 blockchains. Browser auth, streaming responses, profile-scoped local state, plugin system, and zero-config agent mode.
 
 **Requires the CLI**: `npm install -g @emblemvault/agentwallet`
 
@@ -26,7 +26,7 @@ This provides a single command: `emblemai`
 
 **Step 2: Use it**
 
-When this skill loads, you can ask Agent Hustle anything about crypto:
+When this skill loads, you can ask EmblemAI anything about crypto:
 
 - "What are my wallet addresses?"
 - "Show my balances across all chains"
@@ -42,7 +42,7 @@ emblemai --agent --profile hustle -m "What are my wallet addresses?"
 
 **To invoke this skill, say things like:**
 - "Use my Emblem wallet to check balances"
-- "Ask Agent Hustle what tokens I have"
+- "Ask EmblemAI what tokens I have"
 - "Connect to EmblemVault"
 - "Check my crypto portfolio"
 - "Create or use my agent wallet profile and show my addresses"
@@ -53,7 +53,7 @@ All requests are routed through `emblemai` under the hood. If more than one prof
 
 ## Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 20.18.0
 - **Terminal** with 256-color support (iTerm2, Kitty, Windows Terminal, or any xterm-compatible terminal)
 - **Optional**: [glow](https://github.com/charmbracelet/glow) for rich markdown rendering (`brew install glow` on macOS)
 
@@ -129,7 +129,7 @@ In agent mode, if no password is provided for the selected profile, a secure ran
    Password auth: password is sent to `EmblemAuthSDK.authenticatePassword()` and can be stored in the selected profile for reuse
 3. A deterministic vault is derived -- same credentials always yield the same vault
 4. The session provides wallet addresses across multiple chains: Solana, Ethereum, Base, BSC, Polygon, Hedera, Bitcoin
-5. `HustleIncognitoClient` is initialized with the profile's session
+5. The EmblemAI client is initialized with the profile's session
 
 ### Credential Discovery
 
@@ -159,14 +159,14 @@ If no credentials are found for the selected profile, agent mode can auto-genera
 
 ## Execution Notes
 
-**Allow sufficient time.** Hustle AI queries may take up to 2 minutes for complex operations (trading, cross-chain lookups). The CLI outputs progress dots every 5 seconds to indicate it's working.
+**Allow sufficient time.** EmblemAI queries may take up to 2 minutes for complex operations (trading, cross-chain lookups). The CLI outputs progress dots every 5 seconds to indicate it's working.
 
-**Present Hustle's response clearly.** Display the response from Hustle AI to the user in a markdown codeblock:
+**Present EmblemAI's response clearly.** Display the response from EmblemAI to the user in a markdown codeblock:
 
 ```markdown
-**Hustle AI Response:**
+**EmblemAI Response:**
 \`\`\`
-[response from Hustle]
+[response from EmblemAI]
 \`\`\`
 ```
 
@@ -208,7 +208,7 @@ emblemai --agent --profile agent-alice -m "My addresses?"
 emblemai --agent --profile agent-bob -m "My addresses?"
 ```
 
-Agent mode always uses password auth (never browser auth), retains conversation history between calls for the selected profile, and supports the full Hustle AI toolset including trading, transfers, portfolio queries, and cross-chain operations.
+Agent mode always uses password auth (never browser auth), retains conversation history between calls for the selected profile, and supports the full EmblemAI toolset including trading, transfers, portfolio queries, and cross-chain operations.
 
 ### Interactive Mode (For Humans)
 
@@ -274,8 +274,11 @@ If more than one profile exists, every agent-mode CLI invocation must include `-
 | Command | Description |
 |---------|-------------|
 | `/model <id>` | Set the active model by ID |
-| `/model clear` | Reset to API default model |
+| `/model clear` | Reset to the CLI's default model |
 | `/model` | Show currently selected model |
+| `/models` | Show current model and curated default choices |
+| `/models use <number\|id>` | Pick one of the curated default models |
+| `/models search <query>` | Fuzzy-search OpenRouter models and pick one via `/model <number\|id>` |
 
 ### Tool Management
 
@@ -364,7 +367,7 @@ Log file defaults to `~/.emblemai-stream.log`. Override with `--log-file <path>`
 | `--stream` | | Start with streaming enabled (default: on) |
 | `--log` | | Enable stream logging |
 | `--log-file <path>` | | Override log file path (default: `~/.emblemai-stream.log`) |
-| `--hustle-url <url>` | | Override Hustle API URL |
+| `--hustle-url <url>` | | Override EmblemAI server URL |
 | `--auth-url <url>` | | Override auth service URL |
 | `--api-url <url>` | | Override API service URL |
 
@@ -396,7 +399,7 @@ The agent will never autonomously move funds, sign transactions, or place orders
 
 **CRITICAL: Use verbose, natural language.**
 
-Hustle AI interprets terse commands as "$0" transactions. Always explain your intent in full sentences.
+EmblemAI interprets terse commands as "$0" transactions. Always explain your intent in full sentences.
 
 | Bad (terse) | Good (verbose) |
 |-------------|----------------|
@@ -404,7 +407,7 @@ Hustle AI interprets terse commands as "$0" transactions. Always explain your in
 | `"swap sol usdc"` | `"I'd like to swap $20 worth of SOL to USDC on Solana"` |
 | `"trending"` | `"What tokens are trending on Solana right now?"` |
 
-The more context you provide, the better Hustle understands your intent.
+The more context you provide, the better EmblemAI understands your intent.
 
 ---
 
@@ -434,7 +437,7 @@ Each password deterministically generates wallet addresses across all chains:
 | **Hedera** | Account ID (0.0.XXXXXXX) |
 | **Bitcoin** | Taproot, SegWit, and Legacy addresses |
 
-Ask Hustle: `"What are my wallet addresses?"` to retrieve all addresses.
+Ask EmblemAI: `"What are my wallet addresses?"` to retrieve all addresses.
 
 ---
 
@@ -672,5 +675,5 @@ If you discover a security vulnerability, please report it responsibly:
 
 - [npm package](https://www.npmjs.com/package/@emblemvault/agentwallet)
 - [EmblemVault](https://emblemvault.dev)
-- [Hustle AI](https://agenthustle.ai)
+- [EmblemAI](https://emblemvault.ai)
 - [GitHub](https://github.com/EmblemCompany/EmblemAi-AgentWallet)
