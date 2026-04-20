@@ -30,6 +30,6 @@ See [SKILL.md](SKILL.md) for the full reference -- profiles, authentication, com
 
 ## Links
 
-- [emblemvault.dev](https://emblemvault.dev)
+- [emblemvault.ai](https://emblemvault.ai)
 - [npm: @emblemvault/agentwallet](https://www.npmjs.com/package/@emblemvault/agentwallet)
 - [GitHub: EmblemCompany](https://github.com/EmblemCompany)
